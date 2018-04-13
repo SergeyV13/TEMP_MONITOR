@@ -5,56 +5,28 @@ LiquidCrystal lcd(13, 12, 11, 10, 9, 8 );
 //Инициализация дисплея в общем виде выглядит так
 //LiquidCrystal lcd(rs, e, d5, d4, d3, d2);
 
-byte outside[8] = {
-  B00100,
-  B01110,
-  B10101,
-  B00100,
-  B10101,
-  B10001,
-  B10001,
-  B11111
-};
+byte outside[8] = {B00100,  B01110,  B10101,  B00100,  B10101,  B10001,  B10001,  B11111};
+byte inside[8] = {B00100,  B10101,  B01110,  B00100,  B10001,  B10001,  B10001,  B11111};
+byte direct[8] = {B00000,B01111,B00000,B10000,B01000,B10000,B00000,B01111};
 
-byte inside[8] = {
-  B00100,
-  B10101,
-  B01110,
-  B00100,
-  B10001,
-  B10001,
-  B10001,
-  B11111
-};
-
-
-byte direct[8] = {
-B00000,
-B01111,
-B00000,
-B10000,
-B01000,
-B10000,
-B00000,
-B01111
-};
-
-byte back[8] = {
-  B00000,
-  B11110,
-  B00000,
-  B00010,
-  B00001,
-  B00010,
-  B00000,
-  B11110
-};
+byte back[8] = {B00000,  B11110,  B00000,  B00010,  B00001,  B00010,  B00000,  B11110};
 
 //##### time
 #include <Wire.h>
 #include <TimeLib.h>
 #include <DS1307RTC.h>
 //#####
+
+//##### temperature
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+OneWire oneWire_in(36);
+DallasTemperature INS_TMP_SENS(&oneWire_in);
+OneWire oneWire_out(A10);
+DallasTemperature OUT_TMP_SENS(&oneWire_out);
+//#####
+
 
 #define KT1 23
 #define SG7 32
@@ -91,6 +63,28 @@ lcd.write(byte(3));
 pinMode(KT1, OUTPUT);
 pinMode(SG7, OUTPUT);
 }
+
+void ask_sensors()
+{
+    tmElements_t tm;
+    
+    INS_TMP_SENS.requestTemperatures();
+    OUT_TMP_SENS.requestTemperatures();
+
+    float T_INS=INS_TMP_SENS.getTempCByIndex(0);
+    float T_OUT=OUT_TMP_SENS.getTempCByIndex(0);
+   
+    //float_to_char(INS_TMP_SENS.getTempCByIndex(0), T_INS);
+    //float_to_char(OUT_TMP_SENS.getTempCByIndex(0), T_OUT);
+
+    Serial.print("T_INS ");
+    Serial.println(T_INS);
+    Serial.print("T_OUT ");
+    Serial.println(T_OUT);
+
+  
+}
+
  
 void loop() {
   i+=1;
@@ -108,9 +102,9 @@ void loop() {
   }*/
 
     
+ask_sensors();
 
-
-delay(5000);
+delay(1000);
 
 }
 

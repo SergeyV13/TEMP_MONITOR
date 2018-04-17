@@ -119,8 +119,8 @@ void setup() {
   ether.printIp("GW:  ", ether.gwip);  
   ether.printIp("DNS: ", ether.dnsip);  
 
-  INS_TMP_SENS.begin();
-  INS_TMP_SENS.setResolution(9); 
+  //INS_TMP_SENS.begin();
+  //INS_TMP_SENS.setResolution(9); 
 }
 
 
@@ -243,50 +243,37 @@ void ask_sensors(byte stp)
 {
 
    switch (stp) {
-    case 0:
-      INS_TMP_SENS.requestTemperatures();
-      break;
-    case 1:
-      T_INS=INS_TMP_SENS.getTempCByIndex(0);
-      break;
-    case 2:
-      OUT_TMP_SENS.requestTemperatures();
-      break;
-    case 3:
-      T_OUT=OUT_TMP_SENS.getTempCByIndex(0);
-      break;
+    case 0: INS_TMP_SENS.requestTemperatures();        break;
+    case 1: T_INS=INS_TMP_SENS.getTempCByIndex(0);     break;
+    case 2: OUT_TMP_SENS.requestTemperatures();        break;
+    case 3: T_OUT=OUT_TMP_SENS.getTempCByIndex(0);     break;
+    case 4: afr_in_sens.requestTemperatures();         break;
+    case 5: t_afr_in=afr_in_sens.getTempCByIndex(0);   break;
+    case 6: afr_out_sens.requestTemperatures();        break;
+    case 7: t_afr_out=afr_out_sens.getTempCByIndex(0); break;
+    case 8: pit_sens.requestTemperatures();            break;
+    case 9: T_PIT=pit_sens.getTempCByIndex(0);         break;
+    case 10: 
+        tmElements_t tm;
+        if (RTC.read(tm))
+          {
+            fill_time(tm.Hour,0);
+            TIME_A[2]=':';
+            fill_time(tm.Minute,3);
+            TIME_A[5]=':';
+            fill_time(tm.Second,6);
+          }
+        else
+          {
+            TIME_A[0]='N'; TIME_A[1]='O'; TIME_A[2]=' '; TIME_A[3]='C'; TIME_A[4]='O'; TIME_A[5]='N'; TIME_A[6]='N'; TIME_A[7]='\0'; TIME_A[8]='\0'; TIME_A[9]='\0';
+          };
+        break;
+    case 11: MST_PIT=0; break;
+    
+      
   }
 
-    if (stp)
-    
-
-  //  
- //   
-    
- /*   afr_in_sens.requestTemperatures();
-    afr_out_sens.requestTemperatures();
-    
-    t_afr_in=afr_in_sens.getTempCByIndex(0);
-    t_afr_out=afr_out_sens.getTempCByIndex(0);
-
-    pit_sens.requestTemperatures();
-    T_PIT=pit_sens.getTempCByIndex(0);
-
-    MST_PIT=0;
-
-    tmElements_t tm;
-    if (RTC.read(tm))
-        {
-          fill_time(tm.Hour,0);
-          TIME_A[2]=':';
-          fill_time(tm.Minute,3);
-          TIME_A[5]=':';
-          fill_time(tm.Second,6);
-        }
-      else
-        {
-          TIME_A[0]='N'; TIME_A[1]='O'; TIME_A[2]=' '; TIME_A[3]='C'; TIME_A[4]='O'; TIME_A[5]='N'; TIME_A[6]='N'; TIME_A[7]='\0'; TIME_A[8]='\0'; TIME_A[9]='\0';
-        };*/
+  Serial.print("ASK");    Serial.println(stp);
 }
 
 void lcd_print_tmps(){
@@ -332,20 +319,15 @@ void lcd_print_tmp(float p_tmp, byte p_rw, byte p_cl){
 void loop() {
   long strt;
   
-  for (byte cl_pos=0; cl_pos < 7; cl_pos++)
+  for (byte cl_pos=0; cl_pos <= 12; cl_pos++)
     {    
       
       Serial.print("STRT "); Serial.println(cl_pos);
       strt=millis();
       
-      if (prev_ask<(millis()-ms_to_reask) || prev_ask>millis()) 
-          {
-            ask_sensors();
-            prev_ask = millis();
-            Serial.println("ASK");
-          }
+      ask_sensors(cl_pos);
     
-      if (prev_ask<(millis()-ms_to_reask/2 || prev_ask>millis())) 
+      if (cl_pos==12) 
           {
             lcd_print_tmps();
             Serial.println("PRINT");

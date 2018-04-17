@@ -33,13 +33,14 @@ char TIME_A[9];
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-OneWire oneWire_in(36);   DallasTemperature INS_TMP_SENS(&oneWire_in);
-OneWire oneWire_out(A10); DallasTemperature OUT_TMP_SENS(&oneWire_out);
+//OneWire oneWire_in(36);   DallasTemperature INS_TMP_SENS(&oneWire_in);
+OneWire oneWire_in(A10);   DallasTemperature INS_TMP_SENS(&oneWire_in);
+OneWire oneWire_out(A8); DallasTemperature OUT_TMP_SENS(&oneWire_out);
 
-OneWire afr_in(A8);       DallasTemperature afr_in_sens(&afr_in);
-OneWire afr_out(A7);      DallasTemperature afr_out_sens(&afr_out);
+OneWire afr_in(A7);       DallasTemperature afr_in_sens(&afr_in);
+OneWire afr_out(A5);      DallasTemperature afr_out_sens(&afr_out);
 
-OneWire pit(A5);      DallasTemperature pit_sens(&pit);
+OneWire pit(A3);      DallasTemperature pit_sens(&pit);
 
 float T_INS;
 float T_OUT;
@@ -76,6 +77,9 @@ char SUPPL[7];
 char PUMP[7]; 
 //#####
 
+#define ms_to_reask 1000
+unsigned long prev_ask=0;
+byte tmp_printed=0;
 
 void setup() {
   Serial.begin(9600);
@@ -115,8 +119,8 @@ void setup() {
   ether.printIp("GW:  ", ether.gwip);  
   ether.printIp("DNS: ", ether.dnsip);  
 
-  //INS_TMP_SENS.begin();
-  //INS_TMP_SENS.setResolution(11); 
+  INS_TMP_SENS.begin();
+  INS_TMP_SENS.setResolution(9); 
 }
 
 
@@ -210,7 +214,7 @@ static word homePage() {
 
 void float_to_char(float p_f, char *p_ch_t)
 {  
-    for (int i=0; i < 7; i++) p_ch_t[i]='\0';
+    for (byte i=0; i < 7; i++) p_ch_t[i]='\0';
    
     if (p_f < -126)
       {
@@ -235,16 +239,31 @@ void fill_time(byte p_v, byte p_pos)
         
 };
 
-void ask_sensors()
+void ask_sensors(byte stp)
 {
-   
-    INS_TMP_SENS.requestTemperatures();
-    OUT_TMP_SENS.requestTemperatures();
 
-    T_INS=INS_TMP_SENS.getTempCByIndex(0);
-    T_OUT=OUT_TMP_SENS.getTempCByIndex(0);
+   switch (stp) {
+    case 0:
+      INS_TMP_SENS.requestTemperatures();
+      break;
+    case 1:
+      T_INS=INS_TMP_SENS.getTempCByIndex(0);
+      break;
+    case 2:
+      OUT_TMP_SENS.requestTemperatures();
+      break;
+    case 3:
+      T_OUT=OUT_TMP_SENS.getTempCByIndex(0);
+      break;
+  }
+
+    if (stp)
     
-    afr_in_sens.requestTemperatures();
+
+  //  
+ //   
+    
+ /*   afr_in_sens.requestTemperatures();
     afr_out_sens.requestTemperatures();
     
     t_afr_in=afr_in_sens.getTempCByIndex(0);
@@ -267,7 +286,7 @@ void ask_sensors()
       else
         {
           TIME_A[0]='N'; TIME_A[1]='O'; TIME_A[2]=' '; TIME_A[3]='C'; TIME_A[4]='O'; TIME_A[5]='N'; TIME_A[6]='N'; TIME_A[7]='\0'; TIME_A[8]='\0'; TIME_A[9]='\0';
-        };
+        };*/
 }
 
 void lcd_print_tmps(){
@@ -311,40 +330,49 @@ void lcd_print_tmp(float p_tmp, byte p_rw, byte p_cl){
 
  
 void loop() {
+  long strt;
   
-  tmElements_t tm;
-  String tme;
-
-  lcd.setCursor(1,1);
-  
- /* if (RTC.read(tm)) {
-    tme=String(tm.Hour) +':'+String(tm.Minute)+':'+String(tm.Second);
-    
-    lcd.print(tme);
-  } else {
-    lcd.print("TME ERR");
-  }*/
-
-  ask_sensors();  
-
-  lcd_print_tmps();
-
-
- /*if (prev_ask==0 or prev_ask<(millis()-ms_to_reask)) 
-      {
-        ask_sensors();
-        prev_ask = millis();
-      }
-*/
-  word len = ether.packetReceive();
-  word pos = ether.packetLoop(len);
-    if (pos)  // check if valid tcp data is received
-      {
-        char *data = (char *) Ethernet::buffer + pos;
-        ether.httpServerReply(homePage());
-      }
+  for (byte cl_pos=0; cl_pos < 7; cl_pos++)
+    {    
       
-//delay(1000);
-
+      Serial.print("STRT "); Serial.println(cl_pos);
+      strt=millis();
+      
+      if (prev_ask<(millis()-ms_to_reask) || prev_ask>millis()) 
+          {
+            ask_sensors();
+            prev_ask = millis();
+            Serial.println("ASK");
+          }
+    
+      if (prev_ask<(millis()-ms_to_reask/2 || prev_ask>millis())) 
+          {
+            lcd_print_tmps();
+            Serial.println("PRINT");
+          }
+      
+      
+    
+    
+    
+      word len = ether.packetReceive();
+      word pos = ether.packetLoop(len);
+        if (pos)  // check if valid tcp data is received
+          {
+            
+      
+      
+            char *data = (char *) Ethernet::buffer + pos;
+            ether.httpServerReply(homePage());
+    
+    
+          }
+    
+      Serial.print("CEND ");
+      strt=millis()-strt;
+      Serial.println(strt);
+      delay(100);
+      
+  }
 }
 

@@ -22,10 +22,25 @@ byte difft[8] =   {B11001,B10101,B11001,B00000,B01001,B10010,B11011,B10010};
 #include <DS1307RTC.h>
 
 char TIME_A[9];
+byte TIME_LED[3];
 
 #define KT1 23
 #define KT2 25
-#define SG7 32
+#define KT3 27
+#define KT4 29
+#define KT5 31
+
+byte KT_A[]={KT1,KT2,KT3,KT4,KT5};
+
+#define SGA 20
+#define SGB 22
+#define SGC 24
+#define SGD 26
+#define SGE 28
+#define SGF 30
+#define SGG 32
+
+
 //#####
 
 
@@ -81,6 +96,8 @@ char PUMP[7];
 unsigned long prev_ask=0;
 byte tmp_printed=0;
 
+#define SUPPL_PIN A0
+
 void setup() {
   Serial.begin(9600);
 
@@ -104,9 +121,9 @@ void setup() {
   //##### LiquidCrystal
   
   
+  pinMode(SGA, OUTPUT); pinMode(SGB, OUTPUT); pinMode(SGC, OUTPUT); pinMode(SGD, OUTPUT); pinMode(SGE, OUTPUT); pinMode(SGF, OUTPUT); pinMode(SGG, OUTPUT);
+  pinMode(KT1, OUTPUT); pinMode(KT2, OUTPUT); pinMode(KT3, OUTPUT); pinMode(KT4, OUTPUT); pinMode(KT5, OUTPUT);
   
-  pinMode(KT1, OUTPUT);
-  pinMode(SG7, OUTPUT);
 
 
 
@@ -149,7 +166,7 @@ static word homePage() {
   float_to_char(MST_PIT, MST_PIT_A);
 
 
-  if (1)
+  if (analogRead(SUPPL_PIN)>800)
     {SUPPL[0]='O';SUPPL[1]='N';SUPPL[2]='\0';}
   else
     {SUPPL[0]='O';SUPPL[1]='F';SUPPL[2]='F';SUPPL[3]='\0';};
@@ -258,10 +275,23 @@ void ask_sensors(byte stp)
         if (RTC.read(tm))
           {
             fill_time(tm.Hour,0);
+            
+            TIME_LED[0]=tm.Hour/10;
+            TIME_LED[1]=tm.Hour%10;
+            
             TIME_A[2]=':';
             fill_time(tm.Minute,3);
+
+            TIME_LED[2]=tm.Second/10;
+            TIME_LED[3]=tm.Second%10;
+
             TIME_A[5]=':';
             fill_time(tm.Second,6);
+                     
+            Serial.println("tm.Second");
+            Serial.println(tm.Second);
+            Serial.println(TIME_LED[2]);
+            Serial.println(TIME_LED[3]);
           }
         else
           {
@@ -273,7 +303,7 @@ void ask_sensors(byte stp)
       
   }
 
-  Serial.print("ASK");    Serial.println(stp);
+  //Serial.print("ASK");    Serial.println(stp);
 }
 
 void lcd_print_tmps(){
@@ -313,8 +343,41 @@ void lcd_print_tmp(float p_tmp, byte p_rw, byte p_cl){
   else if (p_tmp<0)     {lcd.print(p_tmp,1);}
 };
 
+void dwh(byte pn) {digitalWrite(pn,HIGH);};
+void dwl(byte pn) {digitalWrite(pn,HIGH);};
 
+void show_digit_led(byte dgt)
+{
+  switch (dgt) {
+    case 0: dwh(SGA); dwh(SGB); dwh(SGC); dwh(SGD); dwh(SGE); dwh(SGF); dwl(SGG); break;
+    case 1: dwl(SGA); dwh(SGB); dwh(SGC); dwl(SGD); dwl(SGE); dwl(SGF); dwl(SGG); break;
+    case 2: dwh(SGA); dwh(SGB); dwl(SGC); dwh(SGD); dwh(SGE); dwl(SGF); dwh(SGG); break;
+    case 3: dwh(SGA); dwh(SGB); dwh(SGC); dwh(SGD); dwl(SGE); dwl(SGF); dwh(SGG); break;
+    case 4: dwl(SGA); dwh(SGB); dwh(SGC); dwl(SGD); dwl(SGE); dwh(SGF); dwh(SGG); break;
+    case 5: dwh(SGA); dwl(SGB); dwh(SGC); dwh(SGD); dwl(SGE); dwh(SGF); dwh(SGG); break;
+    case 6: dwh(SGA); dwl(SGB); dwh(SGC); dwh(SGD); dwh(SGE); dwh(SGF); dwh(SGG); break;
+    case 7: dwh(SGA); dwh(SGB); dwh(SGC); dwl(SGD); dwl(SGE); dwl(SGF); dwl(SGG); break;
+    case 8: dwh(SGA); dwh(SGB); dwh(SGC); dwh(SGD); dwh(SGE); dwh(SGF); dwh(SGG); break;
+    case 9: dwh(SGA); dwh(SGB); dwh(SGC); dwh(SGD); dwl(SGE); dwh(SGF); dwh(SGG); break;
+    
+    case 10:dwl(SGA); dwl(SGB); dwl(SGC); dwh(SGD); dwl(SGE); dwl(SGF); dwl(SGG); break;
+    
+  }
+}
 
+void show_time_led()
+{
+    for (byte c=0; c<4; c++)
+    {
+      for (byte i=0; i <4; i++)
+      {
+         digitalWrite(KT_A[i],LOW);
+         show_digit_led(TIME_LED[i]);
+         delay(10);
+         digitalWrite(KT_A[i],HIGH);
+      }
+    }
+};
  
 void loop() {
   long strt;
@@ -322,7 +385,7 @@ void loop() {
   for (byte cl_pos=0; cl_pos <= 12; cl_pos++)
     {    
       
-      Serial.print("STRT "); Serial.println(cl_pos);
+      //Serial.print("STRT "); Serial.println(cl_pos);
       strt=millis();
       
       ask_sensors(cl_pos);
@@ -330,7 +393,7 @@ void loop() {
       if (cl_pos==12) 
           {
             lcd_print_tmps();
-            Serial.println("PRINT");
+            //Serial.println("PRINT");
           }
       
       
@@ -350,10 +413,12 @@ void loop() {
     
           }
     
-      Serial.print("CEND ");
-      strt=millis()-strt;
-      Serial.println(strt);
-      delay(100);
+      //Serial.print("CEND ");
+      //strt=millis()-strt;
+      //Serial.println(strt);
+
+      //show_time_led();
+      
       
   }
 }
